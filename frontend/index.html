@@ -205,46 +205,55 @@
     }
 
     function renderKPIs(data) {
-      // 1. Última observación registrada
+      // 1. Última observación registrada en histórico
       if (data.historico && data.historico.length > 0) {
         const ult = data.historico[data.historico.length - 1];
-        document.getElementById('kpi-ult-valor').textContent = ult.valor.toFixed(2);
-        document.getElementById('kpi-ult-hora').textContent = `Hora (COL): ${formatHoraColombia(ult.tiempo)}`;
+        const valUlt = ult.valor !== undefined ? ult.valor : ult.value;
+        if (valUlt !== undefined && valUlt !== null) {
+          document.getElementById('kpi-ult-valor').textContent = Number(valUlt).toFixed(2);
+        }
+        document.getElementById('kpi-ult-hora').textContent = `Hora (COL): ${formatHoraColombia(ult.tiempo || ult.ds)}`;
       }
 
       // 2. Próxima hora pronosticada y máximo esperado
       if (data.prediccion && data.prediccion.length > 0) {
-        const prox = data.prediccion;
-        document.getElementById('kpi-prox-valor').textContent = prox.prediccion.toFixed(2);
-        document.getElementById('kpi-prox-hora').textContent = `Hora (COL): ${formatHoraColombia(prox.tiempo)}`;
+        const prox = data.prediccion[0]; // Corrección: primer elemento de la lista
+        const valProx = prox.prediccion !== undefined ? prox.prediccion : prox.yhat;
+        if (valProx !== undefined && valProx !== null) {
+          document.getElementById('kpi-prox-valor').textContent = Number(valProx).toFixed(2);
+        }
+        document.getElementById('kpi-prox-hora').textContent = `Hora (COL): ${formatHoraColombia(prox.tiempo || prox.ds)}`;
 
-        const maxPred = Math.max(...data.prediccion.map(p => p.limite_superior));
-        document.getElementById('kpi-max-valor').textContent = maxPred.toFixed(2);
+        const limitesSuperiores = data.prediccion.map(p => p.limite_superior !== undefined ? p.limite_superior : p.yhat_upper);
+        const maxPred = Math.max(...limitesSuperiores);
+        if (!isNaN(maxPred)) {
+          document.getElementById('kpi-max-valor').textContent = maxPred.toFixed(2);
+        }
       }
     }
 
     function renderChart(data) {
       const ctx = document.getElementById('forecastChart').getContext('2d');
 
-      const historicoLabels = data.historico.map(h => formatHoraColombia(h.tiempo));
-      const prediccionLabels = data.prediccion.map(p => formatHoraColombia(p.tiempo));
+      const historicoLabels = data.historico.map(h => formatHoraColombia(h.tiempo || h.ds));
+      const prediccionLabels = data.prediccion.map(p => formatHoraColombia(p.tiempo || p.ds));
       const labels = [...historicoLabels, ...prediccionLabels];
 
-      const historicoVals = data.historico.map(h => h.valor);
+      const historicoVals = data.historico.map(h => h.valor !== undefined ? h.valor : h.value);
       const ultValorHist = historicoVals[historicoVals.length - 1];
 
       // Conectar la gráfica entre histórico y pronóstico
       const prediccionVals = Array(historicoVals.length - 1).fill(null);
       prediccionVals.push(ultValorHist);
-      data.prediccion.forEach(p => prediccionVals.push(p.prediccion));
+      data.prediccion.forEach(p => prediccionVals.push(p.prediccion !== undefined ? p.prediccion : p.yhat));
 
       const limSupVals = Array(historicoVals.length - 1).fill(null);
       limSupVals.push(ultValorHist);
-      data.prediccion.forEach(p => limSupVals.push(p.limite_superior));
+      data.prediccion.forEach(p => limSupVals.push(p.limite_superior !== undefined ? p.limite_superior : p.yhat_upper));
 
       const limInfVals = Array(historicoVals.length - 1).fill(null);
       limInfVals.push(ultValorHist);
-      data.prediccion.forEach(p => limInfVals.push(p.limite_inferior));
+      data.prediccion.forEach(p => limInfVals.push(p.limite_inferior !== undefined ? p.limite_inferior : p.yhat_lower));
 
       if (chartInstance) {
         chartInstance.destroy();
@@ -270,7 +279,7 @@
               borderColor: '#f59e0b',
               backgroundColor: '#f59e0b',
               borderWidth: 2,
-              borderDash: [1],
+              borderDash: [5, 5],
               pointRadius: 2,
               tension: 0.1
             },
