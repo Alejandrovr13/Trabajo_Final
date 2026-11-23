@@ -8,4 +8,8 @@ __pycache__/
 *.pyc 
 *.pyo 
 *.md
+<<<<<<< HEAD
 pruebas.http
+=======
+pruebas.http
+>>>>>>> 35eabbe64240afb2667d5699f577fca73f4d12c3
